@@ -1,0 +1,171 @@
+/* Base Styles: Applicable to all devices, mobile-first approach */
+body {
+  font-family: sans-serif;
+  margin: 0;
+  display: flex;
+  flex-direction: column; /* Stack map and controls vertically */
+  min-height: 100vh; /* Ensure body takes full viewport height */
+  background-color: #f8f8f8;
+  /* OPTIONAL: If using Google Fonts, apply here, e.g.: */
+  /* font-family: 'Roboto', sans-serif; */
+}
+
+#map {
+  height: 50vh; /* Start with 50% of viewport height for mobile */
+  width: 100%;
+  flex-grow: 1; /* Allow map to grow if space permits */
+  border-bottom: 1px solid #ccc;
+}
+
+#controls {
+  padding: 1rem;
+  background: #f4f4f4;
+  border-top: 1px solid #ccc;
+  display: flex;
+  flex-direction: column; /* Stack panels vertically on small screens */
+  gap: 15px; /* Reduce gap slightly for mobile */
+  flex-grow: 1; /* Allow controls section to grow if space permits */
+  overflow-y: auto; /* Allow scrolling if content overflows */
+  -webkit-overflow-scrolling: touch; /* Smooth scrolling on iOS */
+}
+
+.panel {
+  border: 1px solid #ddd;
+  border-radius: 8px; /* Slightly more rounded corners */
+  overflow: hidden;
+  background-color: #fff;
+  box-shadow: 0 2px 5px rgba(0,0,0,0.1); /* Subtle shadow for depth */
+}
+.panel-header {
+  background-color: #e9e9e9; /* Lighter header background */
+  padding: 0.8rem 1rem; /* Slightly more padding */
+  cursor: pointer;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border-bottom: 1px solid #ddd;
+}
+.panel-header h2 {
+  margin: 0;
+  font-size: 1.1rem; /* Slightly smaller font for mobile headers */
+  color: #333;
+}
+.panel-header button {
+  background: none;
+  border: none;
+  font-size: 1.8rem; /* Larger toggle button for touch targets */
+  cursor: pointer;
+  padding: 0 0.5rem; /* Add horizontal padding */
+  line-height: 1;
+  color: #555;
+}
+.panel-content {
+  padding: 1rem;
+  max-height: 500px; /* A large enough value for content */
+  overflow: hidden;
+  transition: max-height 0.3s ease-out, padding 0.3s ease-out, opacity 0.3s ease-out; /* Add opacity transition */
+}
+.panel.collapsed .panel-content {
+  max-height: 0;
+  padding-top: 0;
+  padding-bottom: 0;
+  opacity: 0; /* Fade out content when collapsed */
+}
+
+/* Form and List Specifics */
+#userForm label, #userForm input {
+  display: block;
+  margin-bottom: 0.75rem; /* More space between form elements */
+}
+#userForm input[type="text"],
+#userForm input[type="email"] {
+  width: calc(100% - 16px); /* Account for padding */
+  padding: 0.6rem 0.5rem;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  font-size: 1rem;
+}
+#userForm button, .set-active-btn {
+  padding: 0.75rem 1.25rem; /* Larger buttons for touch */
+  cursor: pointer;
+  background-color: #007bff;
+  color: white;
+  border: none;
+  border-radius: 5px;
+  font-size: 1rem;
+  transition: background-color 0.2s ease;
+}
+#userForm button:hover, .set-active-btn:hover {
+  background-color: #0056b3;
+}
+#userList ul {
+  list-style: none;
+  padding: 0;
+  max-height: 250px; /* Allow user list to scroll if many users */
+  overflow-y: auto;
+  border: 1px solid #eee;
+  border-radius: 5px;
+  padding: 0.5rem;
+}
+#userList li {
+  margin-bottom: 0.75rem; /* More space between list items */
+  padding-bottom: 0.75rem;
+  border-bottom: 1px dashed #eee;
+}
+#userList li:last-child {
+  border-bottom: none;
+}
+.set-active-btn {
+  background-color: #28a745; /* Green for "Set Active" */
+  font-size: 0.9rem; /* Smaller text for action button in list */
+  padding: 0.5rem 1rem;
+  margin-top: 0.5rem; /* Space below text */
+}
+.set-active-btn:hover {
+    background-color: #218838;
+}
+.current-user-info {
+  font-weight: bold;
+  color: #0056b3;
+  margin-top: 1rem;
+  display: block; /* Ensure it takes full width below button */
+}
+
+/* Media Queries for Tablet and PC layouts */
+
+/* Medium screens (Tablets, landscape phones) - roughly 768px and up */
+@media (min-width: 768px) {
+  body {
+    flex-direction: row; /* Layout map and controls side-by-side */
+  }
+  #map {
+    height: 100vh; /* Map takes full height on larger screens */
+    width: 60%; /* Map takes 60% width */
+    border-right: 1px solid #ccc;
+    border-bottom: none; /* Remove bottom border */
+  }
+  #controls {
+    width: 40%; /* Controls take 40% width */
+    flex-direction: column; /* Panels still stack vertically within controls */
+    padding: 1.5rem;
+    gap: 20px;
+    border-top: none; /* Remove top border */
+  }
+  .panel-header h2 {
+    font-size: 1.2rem; /* Restore slightly larger font for headers */
+  }
+}
+
+/* Large screens (PCs) - roughly 1024px and up */
+@media (min-width: 1024px) {
+  #map {
+    width: 70%; /* Map takes 70% width on large screens */
+  }
+  #controls {
+    width: 30%; /* Controls take 30% width */
+    padding: 2rem;
+  }
+  .panel-header h2 {
+    font-size: 1.3rem; /* Even larger font for PC headers */
+  }
+}
