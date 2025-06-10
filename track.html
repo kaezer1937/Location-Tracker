@@ -1,0 +1,505 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Multi-User Tracker</title>
+  <link
+    rel="stylesheet"
+    href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+  />
+  <style>
+    /* Base Styles: Applicable to all devices, mobile-first approach */
+    body {
+      font-family: sans-serif;
+      margin: 0;
+      display: flex;
+      flex-direction: column; /* Stack map and controls vertically */
+      min-height: 100vh; /* Ensure body takes full viewport height */
+      background-color: #f8f8f8;
+    }
+
+    #map {
+      height: 50vh; /* Start with 50% of viewport height for mobile */
+      width: 100%;
+      flex-grow: 1; /* Allow map to grow if space permits */
+      border-bottom: 1px solid #ccc;
+    }
+
+    #controls {
+      padding: 1rem;
+      background: #f4f4f4;
+      border-top: 1px solid #ccc;
+      display: flex;
+      flex-direction: column; /* Stack panels vertically on small screens */
+      gap: 15px; /* Reduce gap slightly for mobile */
+      flex-grow: 1; /* Allow controls section to grow if space permits */
+      overflow-y: auto; /* Allow scrolling if content overflows */
+      -webkit-overflow-scrolling: touch; /* Smooth scrolling on iOS */
+    }
+
+    .panel {
+      border: 1px solid #ddd;
+      border-radius: 8px; /* Slightly more rounded corners */
+      overflow: hidden;
+      background-color: #fff;
+      box-shadow: 0 2px 5px rgba(0,0,0,0.1); /* Subtle shadow for depth */
+    }
+    .panel-header {
+      background-color: #e9e9e9; /* Lighter header background */
+      padding: 0.8rem 1rem; /* Slightly more padding */
+      cursor: pointer;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      border-bottom: 1px solid #ddd;
+    }
+    .panel-header h2 {
+      margin: 0;
+      font-size: 1.1rem; /* Slightly smaller font for mobile headers */
+      color: #333;
+    }
+    .panel-header button {
+      background: none;
+      border: none;
+      font-size: 1.8rem; /* Larger toggle button for touch targets */
+      cursor: pointer;
+      padding: 0 0.5rem; /* Add horizontal padding */
+      line-height: 1;
+      color: #555;
+    }
+    .panel-content {
+      padding: 1rem;
+      max-height: 500px; /* A large enough value for content */
+      overflow: hidden;
+      transition: max-height 0.3s ease-out, padding 0.3s ease-out, opacity 0.3s ease-out; /* Add opacity transition */
+    }
+    .panel.collapsed .panel-content {
+      max-height: 0;
+      padding-top: 0;
+      padding-bottom: 0;
+      opacity: 0; /* Fade out content when collapsed */
+    }
+
+    /* Form and List Specifics */
+    #userForm label, #userForm input {
+      display: block;
+      margin-bottom: 0.75rem; /* More space between form elements */
+    }
+    #userForm input[type="text"],
+    #userForm input[type="email"] {
+      width: calc(100% - 16px); /* Account for padding */
+      padding: 0.6rem 0.5rem;
+      border: 1px solid #ccc;
+      border-radius: 4px;
+      font-size: 1rem;
+    }
+    #userForm button, .set-active-btn {
+      padding: 0.75rem 1.25rem; /* Larger buttons for touch */
+      cursor: pointer;
+      background-color: #007bff;
+      color: white;
+      border: none;
+      border-radius: 5px;
+      font-size: 1rem;
+      transition: background-color 0.2s ease;
+    }
+    #userForm button:hover, .set-active-btn:hover {
+      background-color: #0056b3;
+    }
+    #userList ul {
+      list-style: none;
+      padding: 0;
+      max-height: 250px; /* Allow user list to scroll if many users */
+      overflow-y: auto;
+      border: 1px solid #eee;
+      border-radius: 5px;
+      padding: 0.5rem;
+    }
+    #userList li {
+      margin-bottom: 0.75rem; /* More space between list items */
+      padding-bottom: 0.75rem;
+      border-bottom: 1px dashed #eee;
+    }
+    #userList li:last-child {
+      border-bottom: none;
+    }
+    .set-active-btn {
+      background-color: #28a745; /* Green for "Set Active" */
+      font-size: 0.9rem; /* Smaller text for action button in list */
+      padding: 0.5rem 1rem;
+      margin-top: 0.5rem; /* Space below text */
+    }
+    .set-active-btn:hover {
+        background-color: #218838;
+    }
+    .current-user-info {
+      font-weight: bold;
+      color: #0056b3;
+      margin-top: 1rem;
+      display: block; /* Ensure it takes full width below button */
+    }
+
+    /* Media Queries for Tablet and PC layouts */
+
+    /* Medium screens (Tablets, landscape phones) - roughly 768px and up */
+    @media (min-width: 768px) {
+      body {
+        flex-direction: row; /* Layout map and controls side-by-side */
+      }
+      #map {
+        height: 100vh; /* Map takes full height on larger screens */
+        width: 60%; /* Map takes 60% width */
+        border-right: 1px solid #ccc;
+        border-bottom: none; /* Remove bottom border */
+      }
+      #controls {
+        width: 40%; /* Controls take 40% width */
+        flex-direction: column; /* Panels still stack vertically within controls */
+        padding: 1.5rem;
+        gap: 20px;
+        border-top: none; /* Remove top border */
+      }
+      .panel-header h2 {
+        font-size: 1.2rem; /* Restore slightly larger font for headers */
+      }
+    }
+
+    /* Large screens (PCs) - roughly 1024px and up */
+    @media (min-width: 1024px) {
+      #map {
+        width: 70%; /* Map takes 70% width on large screens */
+      }
+      #controls {
+        width: 30%; /* Controls take 30% width */
+        padding: 2rem;
+      }
+      .panel-header h2 {
+        font-size: 1.3rem; /* Even larger font for PC headers */
+      }
+    }
+
+  </style>
+</head>
+<body>
+  <div id="map"></div>
+  <div id="controls">
+    <div class="panel" id="registrationPanel">
+      <div class="panel-header">
+        <h2>Register User</h2>
+        <button class="toggle-btn" aria-expanded="true">&minus;</button>
+      </div>
+      <div class="panel-content">
+        <form id="userForm">
+          <label for="userName">Name:</label>
+          <input type="text" id="userName" required />
+          <label for="userEmail">Email:</label>
+          <input type="email" id="userEmail" required />
+          <button type="submit">Register</button>
+        </form>
+        <span id="activeUserDisplay" class="current-user-info">Current active user: None</span>
+      </div>
+    </div>
+
+    <div class="panel" id="userListPanel">
+      <div class="panel-header">
+        <h2>Registered Users</h2>
+        <button class="toggle-btn" aria-expanded="true">&minus;</button>
+      </div>
+      <div class="panel-content">
+        <div id="userList">
+          <ul>
+            </ul>
+        </div>
+      </div>
+    </div>
+
+    <div class="panel" id="locationDetailsPanel">
+      <div class="panel-header">
+        <h2>Location Details</h2>
+        <button class="toggle-btn" aria-expanded="true">&minus;</button>
+      </div>
+      <div class="panel-content">
+        <p><strong>Name:</strong> <span id="locationUserName">N/A</span></p>
+        <p><strong>Email:</strong> <span id="locationUserEmail">N/A</span></p>
+        <p><strong>Current Device Location:</strong> <span id="locationText">Locating...</span></p>
+      </div>
+    </div>
+  </div>
+
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <script>
+    // --- Global Variables and Constants ---
+    const map = L.map('map').setView([0, 0], 2); // Initial view for world map
+    const nominatimApiBaseUrl = 'https://nominatim.openstreetmap.org/reverse?format=json';
+    const LOCAL_STORAGE_USERS_KEY = 'multiUserTracker_users';
+    const LOCAL_STORAGE_ACTIVE_USER_KEY = 'multiUserTracker_activeUser';
+
+    let users = {}; // Simulated user database: { userId: { name, email, location, marker } }
+    let activeUserId = null;
+    let userMarkers = {}; // Stores Leaflet marker objects by userId
+
+    // --- DOM Elements ---
+    const userForm = document.getElementById('userForm');
+    const userNameInput = document.getElementById('userName');
+    const userEmailInput = document.getElementById('userEmail');
+    const activeUserDisplay = document.getElementById('activeUserDisplay');
+    const userListUl = document.querySelector('#userList ul');
+    const locationUserName = document.getElementById('locationUserName');
+    const locationUserEmail = document.getElementById('locationUserEmail');
+    const locationText = document.getElementById('locationText');
+
+    // --- Leaflet Map Setup ---
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      attribution: '© OpenStreetMap contributors',
+      maxZoom: 19
+    }).addTo(map);
+
+    // --- Utility Functions ---
+
+    // Generate a simple unique ID
+    function generateUUID() {
+      return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
+        var r = Math.random() * 16 | 0, v = c == 'x' ? r : (r & 0x3 | 0x8);
+        return v.toString(16);
+      });
+    }
+
+    // Save users to Local Storage
+    function saveUsers() {
+      const usersToSave = Object.fromEntries(
+        Object.entries(users).map(([id, user]) => {
+          const { marker, ...rest } = user; // Destructure to exclude marker
+          return [id, rest];
+        })
+      );
+      localStorage.setItem(LOCAL_STORAGE_USERS_KEY, JSON.stringify(usersToSave));
+    }
+
+    // Load users from Local Storage
+    function loadUsers() {
+      const storedUsers = localStorage.getItem(LOCAL_STORAGE_USERS_KEY);
+      if (storedUsers) {
+        const parsedUsers = JSON.parse(storedUsers);
+        users = {}; // Reset users object
+        for (const id in parsedUsers) {
+          const user = parsedUsers[id];
+          users[id] = user;
+          // Recreate markers when loading, if location data exists
+          if (user.location && user.location.latitude && user.location.longitude) {
+            const marker = L.marker([user.location.latitude, user.location.longitude])
+                            .addTo(map)
+                            .bindPopup(`<b>${user.name}</b><br>${user.location.address || 'Locating...'}`);
+            userMarkers[id] = marker;
+            users[id].marker = marker; // Store the Leaflet marker object
+          }
+        }
+      }
+      const storedActiveUserId = localStorage.getItem(LOCAL_STORAGE_ACTIVE_USER_KEY);
+      if (storedActiveUserId && users[storedActiveUserId]) {
+        activeUserId = storedActiveUserId;
+        updateActiveUserDisplay();
+      }
+      renderUserList();
+    }
+
+    // --- User Management Functions ---
+
+    function registerUser(name, email) {
+      const userId = generateUUID();
+      const newUser = {
+        id: userId,
+        name: name,
+        email: email,
+        location: null, // Will be updated by geolocation
+      };
+      users[userId] = newUser;
+      saveUsers();
+      renderUserList();
+      setActiveUser(userId); // Automatically make new user active
+    }
+
+    function setActiveUser(userId) {
+      if (users[userId]) {
+        activeUserId = userId;
+        localStorage.setItem(LOCAL_STORAGE_ACTIVE_USER_KEY, userId);
+        updateActiveUserDisplay();
+        // Update location details panel
+        locationUserName.textContent = users[userId].name;
+        locationUserEmail.textContent = users[userId].email;
+        // Optionally, center map on this user's last known location if available
+        if (users[userId].location && users[userId].location.latitude) {
+            map.setView([users[userId].location.latitude, users[userId].location.longitude], 13);
+        } else {
+            map.setView([0,0], 2); // Reset view if no location
+        }
+      }
+    }
+
+    function updateActiveUserDisplay() {
+      if (activeUserId && users[activeUserId]) {
+        activeUserDisplay.textContent = `Current active user: ${users[activeUserId].name} (${users[activeUserId].email})`;
+      } else {
+        activeUserDisplay.textContent = 'Current active user: None';
+      }
+    }
+
+    function renderUserList() {
+      userListUl.innerHTML = ''; // Clear existing list
+      for (const id in users) {
+        const user = users[id];
+        const li = document.createElement('li');
+        li.innerHTML = `
+          <div><strong>${user.name}</strong> (${user.email})</div>
+          <div style="font-size: 0.9em; color: #555;">
+            Last known: ${user.location ? user.location.address || `${user.location.latitude.toFixed(5)}, ${user.location.longitude.toFixed(5)}` : 'No location'}
+          </div>
+          <button data-user-id="${id}" class="set-active-btn">Set Active</button>
+        `;
+        userListUl.appendChild(li);
+      }
+
+      // Add event listeners for "Set Active" buttons
+      document.querySelectorAll('.set-active-btn').forEach(button => {
+        button.addEventListener('click', (event) => {
+          const userId = event.target.dataset.userId;
+          setActiveUser(userId);
+        });
+      });
+    }
+
+    // --- Geolocation and Map Update Functions ---
+
+    // Function to update the location on the map and fetch address details
+    async function updateLocation(position) {
+      if (!activeUserId) {
+        locationText.textContent = "Please register or select an active user to track.";
+        return;
+      }
+
+      const { latitude, longitude } = position.coords;
+      const currentUser = users[activeUserId];
+
+      // Update the active user's location data
+      currentUser.location = {
+        latitude: latitude,
+        longitude: longitude,
+        timestamp: new Date().toISOString(),
+        address: 'Locating...' // Placeholder until geocoding completes
+      };
+      saveUsers(); // Save updated location immediately
+
+      // Update location text initially with coordinates for the current device
+      locationText.textContent = `${latitude.toFixed(5)}, ${longitude.toFixed(5)}`;
+
+      // Create/Update marker for the active user
+      if (!userMarkers[activeUserId]) {
+        userMarkers[activeUserId] = L.marker([latitude, longitude])
+                                    .addTo(map)
+                                    .bindPopup(`<b>${currentUser.name}</b><br>Locating...`);
+        currentUser.marker = userMarkers[activeUserId]; // Store Leaflet marker object
+      } else {
+        userMarkers[activeUserId].setLatLng([latitude, longitude]);
+      }
+      // Center map on the active user's current location
+      map.setView([latitude, longitude], 16);
+      userMarkers[activeUserId].openPopup(); // Show popup for the active user
+
+      // Reverse geocoding using OpenStreetMap Nominatim API
+      const nominatimApiUrl = `${nominatimApiBaseUrl}&lat=${latitude}&lon=${longitude}`;
+
+      try {
+        const response = await fetch(nominatimApiUrl);
+        if (!response.ok) {
+          throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        const data = await response.json();
+
+        let displayAddress = "Unknown Location";
+        if (data.address) {
+          const road = data.address.road || '';
+          const city = data.address.city || data.address.town || data.address.village || data.address.hamlet || '';
+          const country = data.address.country || '';
+
+          // Construct a more detailed address
+          const parts = [];
+          if (road) parts.push(road);
+          if (city) parts.push(city);
+          if (country) parts.push(country);
+          displayAddress = parts.join(', ') || "Unknown Location";
+        }
+        locationText.textContent = displayAddress;
+        userMarkers[activeUserId].setPopupContent(`<b>${currentUser.name}</b><br>${displayAddress}`);
+
+        // Update the active user's stored location with the full address
+        currentUser.location.address = displayAddress;
+        saveUsers(); // Save with full address
+        renderUserList(); // Re-render user list to show updated address
+      } catch (error) {
+        console.error("Error fetching location details:", error);
+        locationText.textContent = `Error getting details (${latitude.toFixed(5)}, ${longitude.toFixed(5)})`;
+        userMarkers[activeUserId].setPopupContent(`<b>${currentUser.name}</b><br>Error getting address`);
+      }
+    }
+
+    // Function to handle geolocation errors
+    function handleError(err) {
+      alert("Error getting location: " + err.message);
+      console.error("Geolocation error:", err);
+      locationText.textContent = `Geolocation error: ${err.message}`;
+    }
+
+    // --- Widget Functionality ---
+    function setupCollapsiblePanels() {
+      document.querySelectorAll('.panel-header').forEach(header => {
+        header.addEventListener('click', () => {
+          const panel = header.closest('.panel');
+          const toggleBtn = header.querySelector('.toggle-btn');
+          const isCollapsed = panel.classList.toggle('collapsed');
+          toggleBtn.textContent = isCollapsed ? '+' : '−';
+          toggleBtn.setAttribute('aria-expanded', !isCollapsed);
+        });
+      });
+    }
+
+    // --- Event Listeners and Initial Load ---
+
+    userForm.addEventListener('submit', (event) => {
+      event.preventDefault();
+      const name = userNameInput.value.trim();
+      const email = userEmailInput.value.trim();
+      if (name && email) {
+        registerUser(name, email);
+        userNameInput.value = '';
+        userEmailInput.value = '';
+        // Collapse registration panel after successful registration
+        const registrationPanel = document.getElementById('registrationPanel');
+        if (!registrationPanel.classList.contains('collapsed')) {
+            registrationPanel.classList.add('collapsed');
+            registrationPanel.querySelector('.toggle-btn').textContent = '+';
+            registrationPanel.querySelector('.toggle-btn').setAttribute('aria-expanded', 'false');
+        }
+      } else {
+        alert('Please enter both name and email.');
+      }
+    });
+
+    // Initial load when the page loads
+    document.addEventListener('DOMContentLoaded', () => {
+      loadUsers(); // Load existing users from local storage
+      setupCollapsiblePanels(); // Initialize collapsible behavior
+
+      if (navigator.geolocation) {
+        navigator.geolocation.watchPosition(updateLocation, handleError, {
+          enableHighAccuracy: true,
+          maximumAge: 0,
+          timeout: 10000
+        });
+      } else {
+        alert("Geolocation is not supported by this browser.");
+        locationText.textContent = "Geolocation not supported.";
+      }
+    });
+  </script>
+</body>
+</html>
